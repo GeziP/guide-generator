@@ -86,22 +86,22 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
 
 1. **复制模板**
    ```bash
-   # 从 skill 目录复制模板到项目
    cp ~/.claude/skills/guide-generator/template-guide.html ./guide.html
    ```
 
 2. **替换占位符**
 
    模板中的占位符：
-   - `{{PROJECT_NAME}}` — 项目名称
+   - `{{PROJECT_NAME}}` — 项目名称（出现在 Hero、Topbar、Footer）
    - `{{PROJECT_DESC}}` — 一句话描述
    - `{{PROJECT_META}}` — 技术栈元信息
-   - `{{NAV_LINKS}}` — 导航栏链接
    - `{{SECTIONS}}` — 所有章节内容
+
+   **注意**：侧边栏 TOC 由 JS 从 H2/H3 标题自动生成，无需手动维护导航链接。
 
 3. **生成章节内容**
 
-   每个章节遵循以下格式：
+   **平面章节**（默认，适合大多数章节）：
    ```html
    <section class="section" id="xxx">
      <h2 class="section-title">
@@ -113,20 +113,30 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
    </section>
    ```
 
-4. **图表规范**
-
-   **架构图**：使用 `<div class="diagram">` + ASCII art
+   **可折叠章节**（适合参考性内容、附录、FAQ）：
+   ```html
+   <details class="section-block" id="xxx">
+     <summary><h2>章节标题</h2></summary>
+     <div class="section-body">
+       <!-- 具体内容 -->
+     </div>
+   </details>
    ```
-   ┌─────────────────────────┐
+
+4. **组件规范**
+
+   **架构图** — `<div class="diagram">` + ASCII art：
+   ```html
+   <div class="diagram">┌─────────────────────────┐
    │      Layer Name         │
    ├─────────────────────────┤
    │  ┌─────┐    ┌─────┐    │
    │  │ Mod │───▶│ Mod │    │
    │  └─────┘    └─────┘    │
-   └─────────────────────────┘
+   └─────────────────────────┘</div>
    ```
 
-   **流程图**：使用 `<div class="flow">` + `<div class="flow-step">`
+   **流程图** — `<div class="flow">` + `<div class="flow-step">`：
    ```html
    <div class="flow">
      <div class="flow-step"><b>Step 1</b><span>描述</span></div>
@@ -135,35 +145,106 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
    </div>
    ```
 
-5. **代码块规范**
-
-   使用 `<div class="code-block"><code>` 包裹，支持语法高亮 class：
-   - `.cmt` — 注释
-   - `.kw` — 关键字
-   - `.fn` — 函数名
-   - `.str` — 字符串
-   - `.num` — 数字
-
-6. **Callout 规范**
-
+   **代码块** — 支持 highlight.js 自动高亮 + 手动 span 备用：
    ```html
-   <div class="callout info|warning|success|danger">
+   <!-- 推荐：language class 触发 highlight.js 自动高亮 -->
+   <div class="code-block"><pre><code class="language-cpp">
+   void setup() { pinMode(LED, OUTPUT); }
+   </code></pre></div>
+
+   <!-- 备用：手动 span（highlight.js 不支持的语言） -->
+   <div class="code-block"><pre><code>
+   <span class="cmt">// 注释</span>
+   <span class="kw">auto</span> result = <span class="fn">compute</span>(<span class="num">42</span>);
+   </code></pre></div>
+   ```
+
+   **Callout** — 5 种语义变体：
+   ```html
+   <div class="callout info|success|warning|danger|note">
      <span class="callout-icon">图标</span>
-     <div>内容</div>
+     <div><strong>标题</strong>内容</div>
    </div>
    ```
 
-7. **表格规范**
-
-   使用标准 `<table>` + `<thead>` + `<tbody>`，模板 CSS 已内置样式。
-
-8. **FAQ 使用折叠面板**
-
+   **表格** — 带水平滚动包装：
    ```html
-   <details>
+   <div class="table-wrapper">
+     <table><thead><tr><th>...</th></tr></thead>
+     <tbody><tr><td>...</td></tr></tbody></table>
+   </div>
+   ```
+
+   **卡片网格** — 支持列数和颜色变体：
+   ```html
+   <div class="card-grid cols-2|cols-3">
+     <div class="card accent-green|accent-amber|accent-red|accent-violet|accent-cyan|accent-blue">
+       <h4>标题</h4><p>内容</p>
+     </div>
+   </div>
+   ```
+
+   **Tabs 标签页**（纯 CSS，最多 5 个）：
+   ```html
+   <div class="tabs">
+     <input type="radio" name="t1" id="t1-1" checked>
+     <input type="radio" name="t1" id="t1-2">
+     <div class="tab-bar">
+       <label for="t1-1">Tab 1</label>
+       <label for="t1-2">Tab 2</label>
+     </div>
+     <div class="tab-panel">内容 1</div>
+     <div class="tab-panel">内容 2</div>
+   </div>
+   ```
+
+   **分层架构图**（Layer Stack）：
+   ```html
+   <div class="layer-stack">
+     <div class="layer app">应用层 <span class="layer-label">描述</span></div>
+     <div class="layer core">核心层 <span class="layer-label">描述</span></div>
+     <div class="layer infra">基础设施 <span class="layer-label">描述</span></div>
+     <div class="layer hw">硬件层 <span class="layer-label">描述</span></div>
+   </div>
+   ```
+
+   **步骤指示器**（Step Indicators）：
+   ```html
+   <div class="steps">
+     <div class="step" data-step="1"><h4>步骤名</h4><p>描述</p></div>
+     <div class="step" data-step="2"><h4>步骤名</h4><p>描述</p></div>
+   </div>
+   ```
+
+   **前置条件框**（Prerequisite）：
+   ```html
+   <div class="prereq">
+     <h4>前置条件</h4>
+     <ul><li>条件 1</li><li>条件 2</li></ul>
+   </div>
+   ```
+
+   **依赖树**（Dependency Tree）：
+   ```html
+   <div class="dep-tree">ModuleName
+    ├── Dep1
+    ├── Dep2
+    └── Dep3</div>
+   ```
+
+   **FAQ 折叠面板**：
+   ```html
+   <details class="faq">
      <summary>问题标题</summary>
      <div>回答内容</div>
    </details>
+   ```
+
+   **特性列表**（Feature List）：
+   ```html
+   <div class="feature-list">
+     <div class="feature-item"><span class="check">✓</span> 特性描述</div>
+   </div>
    ```
 
 ### Phase 4: 质量校验
@@ -176,8 +257,9 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
 | 代码引用 | 引用具体文件路径和函数名，不能泛泛而谈 |
 | 业务逻辑 | 必须解释"为什么"，不能只说"是什么" |
 | FAQ | 至少 3 个，覆盖常见故障 |
-| 导航 | 所有 section id 必须与 nav-link href 对应 |
 | 占位符 | 不能有未替换的 `{{xxx}}` |
+| 代码块 | 使用 `language-xxx` class 触发 highlight.js 高亮 |
+| H3 id | 为 H3 标题添加 id 属性，确保 TOC 生成正确 |
 | 响应式 | 检查移动端布局（card-grid, flow, table） |
 
 ## 内容质量要求
@@ -200,8 +282,16 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
 
 - 文件名：`guide.html`
 - 位置：项目根目录
-- 格式：单文件 HTML，零外部依赖（CSS 内嵌）
-- 特性：暗色/浅色主题自适应、响应式布局、粘性导航、打印优化
+- 格式：单文件 HTML，CSS 全部内嵌
+- CDN 依赖：highlight.js（代码高亮，离线时回退到手动 span）
+- 特性：
+  - 侧边栏 TOC（H2/H3 自动生成）+ ScrollSpy
+  - 顶部 Topbar（主题切换、移动端菜单）
+  - 暗色/浅色主题切换（localStorage 持久化 + OS 偏好自动检测）
+  - 代码块自动高亮 + 复制按钮
+  - 响应式布局（900px 断点，移动端侧边栏抽屉）
+  - 打印优化（隐藏导航、展开折叠、显示链接 URL）
+  - ASCII 图表复制按钮
 
 ## 示例触发
 
