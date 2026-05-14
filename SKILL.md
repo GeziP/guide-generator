@@ -22,6 +22,24 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
 | 知识来源 | 业务逻辑 + 代码结构 | 代码结构为主 |
 | 输出 | 单个 guide.html | .md + .html (12章) |
 
+## 先问后做原则
+
+**遇到任何不确定的情况，必须先询问用户，禁止猜测后执行。**
+
+需要询问的典型场景：
+- 语言偏好（中文/英文）
+- 项目范围不明确（哪些模块需要覆盖）
+- 目标读者不确定（新手 vs 资深开发者）
+- 章节取舍（哪些章节适用、哪些可跳过）
+- 输出路径或命名约定
+- 用户意图有多种合理解读
+
+使用 AskUserQuestion 时，提供 2-4 个具体选项 + "Other" 自定义输入。
+
+## 语言选择
+
+默认使用中文生成文档。如果用户使用英文交流或明确要求英文文档，则使用英文。无法确定语言时 → 先问。
+
 ## 生成流程
 
 ### Phase 1: 项目理解（必须，不可跳过）
@@ -59,6 +77,15 @@ DO NOT TRIGGER when: user asks about single module API docs (use deepwiki) or sy
    - 识别核心算法和业务公式
    - 识别常见故障点
 
+6. **记录源码位置**
+   - 对每个关键函数/类/结构体，记录 `file:line` 范围
+   - 使用 Grep 定位：`pattern="function ${name}"` 或 `pattern="class ${name}"`
+   - 输出格式：`src/parser.js:500-556`
+
+7. **提取领域术语**
+   - 从类/结构体名、枚举值、配置键、业务概念中收集
+   - 记录：术语、定义、出处文件
+
 ### Phase 2: 结构设计（叙事式，非罗列式）
 
 **核心原则：沿数据流组织章节，不是按组件分类罗列。**
@@ -94,6 +121,39 @@ Guide 是教程，不是参考手册。读者需要理解"数据怎么流过系�
 - 代码嵌在解释段落中（"下面是 X 的定义，注意 Y 字段..."），不是孤立 code block
 - callout 解释**具体机制**（"冲突判定：共享资源 → 同周期 → 时间重叠 → 不同模块"），不是泛泛而谈（"注意资源冲突"）
 - 结构体/数据定义用**具体示例值**（`"module": "tongs", "defaultStart": 4000`），不是空表格列字段名
+
+**共享 CSS/JS**:
+- `~/.claude/skills/shared-docs/doc-shell.css` — 共享样式（变量、暗色模式、布局、组件）
+- `~/.claude/skills/shared-docs/doc-shell.js` — 共享脚本（主题切换、TOC、ScrollSpy、代码复制、图表缩放）
+- 生成 HTML 时，将共享文件内容内嵌到 `<style>` 和 `<script>` 中，再添加模板特有样式
+
+**层级编号**:
+- H2 标题使用数字编号：`## 1. 概述`、`## 2. 配置层` ...
+- H3 标题使用层级编号：`### 2.1 时间轴配置`、`### 2.2 模块配置`
+
+**设计决策 Callout**:
+- 每个主要章节（1-6）至少包含一个 `<div class="callout note">` 解释**为什么**这样设计
+- 格式：说明决策 → 解释 tradeoff 或考虑过的替代方案
+- 差："Module 使用优先级队列"（WHAT）— 好："Module 使用三级优先级队列而非简单FIFO，因为同周期内高优先级任务（如紧急停止）必须插队执行"（WHY）
+- 全文至少 4 个设计决策 callout
+
+**Scope 声明**:
+- 在 Hero 和 Topbar 之后、第一个 section 之前添加：
+```html
+<div class="scope-block">
+  <strong>Scope:</strong> 本文覆盖 XXX 的完整数据流和使用方法。
+</div>
+```
+
+**源码行号引用**:
+- 每个代码引用必须带 `file:line` — 不允许只写函数名不写位置
+- 使用 `<a class="source-ref">` 链接
+- 每个主要章节结尾添加 Sources: 块
+- 文档顶部添加 Relevant source files 块
+
+**术语表**:
+- 在 FAQ 之前添加术语表章节，使用 `<details>` 折叠
+- 表格格式：术语 | 说明 | 出处
 
 1. **复制模板**
    ```bash
@@ -291,6 +351,15 @@ Guide 是教程，不是参考手册。读者需要理解"数据怎么流过系�
 
 生成后必须逐项检查。**任何一项不通过都必须修复后才能交付。**
 
+**自动化校验**（必须运行）：
+```bash
+# 新文档校验（含 source refs / glossary / scope 强制检查）
+node ~/.claude/skills/shared-docs/validate-doc.js --new-doc --fix --type guide guide.html
+
+# 校验已有文档
+node ~/.claude/skills/shared-docs/validate-doc.js --fix --type guide guide.html
+```
+
 **结构校验**：
 
 | 检查项 | 标准 | 修复方式 |
@@ -317,6 +386,15 @@ Guide 是教程，不是参考手册。读者需要理解"数据怎么流过系�
 1. 一个新读者能否从头到尾理解数据如何流过系统？
 2. 完整示例章节是否可独立理解（不依赖其他章节的知识）？
 3. 是否有任何章节只是在"罗列"而非"讲解"？
+
+**交互功能验证（必须手动确认）**：
+
+| 功能 | 验证方式 | 常见问题 |
+|------|---------|---------|
+| 代码复制按钮 | hover 代码块 → 出现 Copy 按钮 → 点击复制 | 缺少 `.copy-btn` JS 逻辑 |
+| 暗色模式 | 点击主题切换 → 所有颜色正确 | CSS 变量缺失导致回退到浏览器默认 |
+| 侧边栏 TOC | 点击 H2/H3 → 滚动到对应章节 → ScrollSpy 高亮 | TOC 为空或链接失效 |
+| ASCII 图表复制 | hover 图表 → 出现 Copy 按钮 → 复制文本 | 复制按钮未绑定事件 |
 
 ## 内容质量要求
 
